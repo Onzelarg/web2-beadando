@@ -2,30 +2,76 @@
 
 $page = "fooldal";
 
+//ini_set("default_socket_timeout", 5000);
+$options = array(
+  // Kell location és uri is:
+  "location" => "https://3dshell.hu/soap/server.php",
+  "uri" => "https://3dshell.hu/soap/server.php",
+  'keep_alive' => false,
+  //'trace' =>true,
+  //'connection_timeout' => 5000,
+  //'cache_wsdl' => WSDL_CACHE_NONE,
+);
+
+try {
+  $kliens = new SoapClient(null, $options);
+  $menuk= $kliens->getPages();
+
+} catch (SoapFault $e) {
+  var_dump($e);
+}
+
 if($_GET['page']){
   $page = $_GET['page'];
 }
 
-//ini_set("default_socket_timeout", 5000);
-$options = array(
-    // Kell location és uri is:
-    "location" => "https://3dshell.hu/soap/server.php",
-    "uri" => "https://3dshell.hu/soap/server.php",
-    'keep_alive' => false,
-    //'trace' =>true,
-    //'connection_timeout' => 5000,
-    //'cache_wsdl' => WSDL_CACHE_NONE,
-);
+if($_GET['ks']){
+  if($_GET[ks]==1){
+    killSession();
+  }
+}
 
+if ($_SERVER["REQUEST_METHOD"] == "POST") { 
+	if($_POST['username'] && $_POST['password']){
+    $user=$_POST['username'];
+    $pwd=$_POST['password'];
 
-try {
-    $kliens = new SoapClient(null, $options);
-    $menuk= $kliens->getPages();
+    $isRegister=$_GET['register'];
 
-    //var_dump($menuk);
+    try {
+      $kliens = new SoapClient(null, $options);
 
-} catch (SoapFault $e) {
-    var_dump($e);
+      if($isRegister){
+
+      }
+
+      if(!$isRegister){
+        $success = $kliens->getUser($user,$pwd);
+
+        if($success){
+          $page="fooldal";
+          setcookie("user", $user, time() + (1800), "/"); // 1800 = 30 perc
+          header("Refresh:0; url=index.php?page=fooldal");
+        }else{
+          $page = "login";
+          $loginError=true;
+        }
+    }
+    
+    } catch (SoapFault $e) {
+      var_dump($e);
+    }
+
+  }else{
+    $page = "login";
+    $loginError=true;
+  }
+
+}
+
+function killSession(){
+  unset($_COOKIE['user']);
+  setcookie("user", "", time() - 3600, "/");
 }
 
 
@@ -273,16 +319,10 @@ try {
                     <li><a href="<?php print "index.php?page=".$menuk[0][0] ?>" class="dropdown-item "><?php print $menuk[0][1] ?> </a>
                     </li>
 
-                    <li><a href="<?php print "?page=".$menuk[1][0] ?>" class="dropdown-item "><?php print $menuk[1][1] ?> </a>
+                    <li><a href="<?php print "?page=".$menuk[2][0] ?>" class="dropdown-item "><?php print $menuk[2][1] ?> </a>
                     </li>
 
                   </ul>
-                </li>
-
-                
-
-                <li class="nav-item px-3">
-                  <a class="nav-link p-0" href="<?php print "?page=".$menuk[2][0] ?>"><?php print $menuk[2][1] ?></a>
                 </li>
 
                 <li class="nav-item px-3">
@@ -297,6 +337,52 @@ try {
                   <a class="nav-link p-0" href="<?php print "?page=".$menuk[5][0] ?>"><?php print $menuk[5][1] ?></a>
                 </li>
 
+                <li class="nav-item px-3">
+                  <a class="nav-link p-0" href="
+                  <?php 
+
+                    if (isset($_COOKIE['user'])){
+                      print "index.php?ks=1";
+                    }else{
+                      print "?page=".$menuk[1][0];
+                    }
+                  
+                   
+                  ?>
+                  ">
+
+                  <?php 
+ 
+                  if (isset($_COOKIE['user'])){
+                      print "Hello ".$_COOKIE['user']." ! (";
+
+                      try {
+                        $kliens = new SoapClient(null, $options);
+                        $role = $kliens->getRole($_COOKIE['user']);
+                        if($role[0]==2){
+                          print "Admin";
+                        }else{
+                          print "Felhasználó";
+                        }
+                        print ")";
+                      }
+                      catch (SoapFault $e) {
+                        var_dump($e);
+                      }
+
+
+                  }else{
+                      print $menuk[1][1];
+                  }
+
+                  
+                  
+                  
+                  
+                  ?>
+                  </a>
+                </li>
+
                 
 
               </ul>
@@ -309,10 +395,46 @@ try {
   </header>
 
   
-  <?php 
-    print file_get_contents($page.".html");
+  <section id="slider" data-aos="fade-up">
+    <div class="container-fluid padding-side">
+      <div class="d-flex rounded-5"
+        style="background-image: url(images/slider-image.jpg); background-size: cover; background-repeat: no-repeat; height: 85vh; background-position: center;">
+        <div class="row align-items-center m-auto pt-5 px-4 px-lg-0">
+          <div class="text-start col-md-6 col-lg-5 col-xl-6 offset-lg-1">
+
+          <?php 
+            if($loginError){
+              print "<h1>Hibás felhasználónév vagy jelszó!</h1>";
+            }
+            print file_get_contents($page.".html");
+
+            if($page=="pizza"){
+              $kliens = new SoapClient(null, $options);
+
+              print $kliens->listAllCategory();
+              print "</table>";
+
+              print $kliens->listAllPizza();
+              print "</table>";
+            }
+
+            if($page=="rendeles"){
+              $kliens = new SoapClient(null, $options);
+              print $kliens->listAllOrder();
+              print "</table>";
+            }
+          
+          ?>
+
+
+
+          </div>
+    </div>
+  </section>
+
+
+
   
-  ?>
 
   <script src="js/jquery-1.11.0.min.js"></script>
   <script type="text/javascript" src="js/bootstrap.bundle.min.js"></script>

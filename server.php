@@ -1,17 +1,5 @@
 <?php
-
-    function connectDatabase(){
-        $dbHost = "a054um.forpsi.com";
-        $dbUser = "b24020";
-        $dbPass = "q69Q37mh";
-        $dbName = "b24020";
-
-        $mySql=mysqli_connect($dbHost, $dbUser ,$dbPass) or die("Database connection failed!");
-        mysqli_select_db($mySql,$dbName) or die("Database open failed!");
-
-        return $mySql;
-    }
-
+    include(dirname(__FILE__)."/../dbconnect.php");
 
     class service {
 
@@ -168,12 +156,59 @@
             
         }
 
-        public function pizzak(){
-            return "<h1>Hello world</h1>";
+
+
+
+        public function pdfPizza($kat){
+            $mySql = connectDatabase();
+
+            $query = "SELECT * FROM pizza WHERE kategorianev='".$kat."';";
+            
+            $response = mysqli_query($mySql,$query);
+
+
+            while($row = mysqli_fetch_row($response)){
+                $IsVegetarian = $row[2]==1 ? "Igen" : "Nem";
+                $result.=$row[0]."    ".$row[1]."    ".$IsVegetarian."\n";
+            }// [    ]
+            
+            return $result;
         }
+
+        public function pdfVega(){
+            $mySql = connectDatabase();
+
+            $query = "SELECT * FROM pizza WHERE vegetarianus='1';";
+            
+            $response = mysqli_query($mySql,$query);
+
+
+            while($row = mysqli_fetch_row($response)){
+                $result.=$row[0]."    ".$row[1]."    Igen\n";
+            }// [    ]
+            
+            return $result;
+        }
+
+        public function pdfDarab($darab){
+            $mySql = connectDatabase();
+
+            $query = "SELECT * FROM rendeles WHERE darab='".$darab."';";
+            
+            $response = mysqli_query($mySql,$query);
+
+            while($row = mysqli_fetch_row($response)){
+                
+                $result.=$row[1]."    ".$row[2]."    ".$row[3]."    ".$row[4]."    ".$row[5];
+                
+            }
+            
+            return $result;
+        }
+
     }
     $options = array(
-        "uri" => "/https://3dshell.hu/soap/server.php"
+        "uri" => "/https://3dshell.hu/soap/web2/server.php"
     );
 
 

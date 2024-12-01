@@ -43,7 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $kliens = new SoapClient(null, $options);
 
         if($isRegister){
-
+          $kliens->addUser($user,$pwd,1);
         }
 
         if(!$isRegister){
@@ -85,7 +85,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       if(strlen($deviza2)>0 && strlen($honap)>0){
         $mnbGraf=true;
       }
-    
+    }
+  }
+
+  if($page=="pdf"){
+    if($_GET['pdfform']==1){
+
+      $darab = $_POST['darab'];
+      $pizza = $_POST['pizza'];
+      $vega = $_POST['vega'];
+
+      try {
+        $kliens = new SoapClient(null, $options);
+      
+      } catch (SoapFault $e) {
+        var_dump($e);
+      }
+
+      if($pizza!=""){
+        $result = $kliens->pdfPizza($pizza);
+      }elseif($vega!=""){
+        $result =  $kliens->pdfVega();
+      }elseif($darab!=""){
+        $result =  $kliens->pdfDarab($darab);
+      }
+
+      include("tcpdf/tcpdf.php");
+
+      $pdf= new TCPDF("P","mm","A4");
+
+      //$pdf->setPrinterHeader(false);
+      //$pdf->setPrinterFooter(false);
+
+      $pdf->AddPage();
+
+      for ($i=0; $i <count($result) ; $i++) { 
+        $pdf->Cell(160,5,$result[$i],1);
+        $pdf->Ln(); 
+      }
+
+      
+
+      $pdf->Output();
 
 
     }
@@ -124,7 +165,8 @@ function killSession(){
 <html>
 
 <head>
-  <title>Mellow - Hotel HTML Website Template</title>
+  <title>"Bella Pizza" Étterem</title>
+  <link rel="icon" type="image/x-icon" href="/img/favico.png">
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -310,8 +352,8 @@ function killSession(){
 
       <div class="container-fluid padding-side">
         <div class="d-flex justify-content-between align-items-center w-100">
-          <a class="navbar-brand" href="index.html">
-            <img src="images/main-logo.png" class="logo img-fluid">
+          <a class="navbar-brand" href="index.php">
+            <img src="img/logo.jpg" class="logo img-fluid" width="150" height="150">
           </a>
 
           <button class="navbar-toggler border-0 d-flex d-lg-none order-3 p-2 shadow-none" type="button"

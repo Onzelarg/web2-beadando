@@ -32,42 +32,77 @@ if($_GET['ks']){
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") { 
-	if($_POST['username'] && $_POST['password']){
-    $user=$_POST['username'];
-    $pwd=$_POST['password'];
+  if($page=="login"){
+    if($_POST['username'] && $_POST['password']){
+      $user=$_POST['username'];
+      $pwd=$_POST['password'];
 
-    $isRegister=$_GET['register'];
+      $isRegister=$_GET['register'];
 
-    try {
-      $kliens = new SoapClient(null, $options);
+      try {
+        $kliens = new SoapClient(null, $options);
 
-      if($isRegister){
+        if($isRegister){
 
+        }
+
+        if(!$isRegister){
+          $success = $kliens->getUser($user,$pwd);
+
+          if($success){
+            $page="fooldal";
+            setcookie("user", $user, time() + (1800), "/"); // 1800 = 30 perc
+            header("Refresh:0; url=index.php?page=fooldal");
+          }else{
+            $page = "login";
+            $loginError=true;
+          }
+      }
+      
+      } catch (SoapFault $e) {
+        var_dump($e);
       }
 
-      if(!$isRegister){
-        $success = $kliens->getUser($user,$pwd);
-
-        if($success){
-          $page="fooldal";
-          setcookie("user", $user, time() + (1800), "/"); // 1800 = 30 perc
-          header("Refresh:0; url=index.php?page=fooldal");
-        }else{
-          $page = "login";
-          $loginError=true;
-        }
+    }else{
+      $page = "login";
+      $loginError=true;
     }
+  }
+
+  if($page=="mnb"){
+    if($_GET['mnbform']==1){
+
+      $deviza1 = $_POST['deviza1'];
+      $date = $_POST['start'];
+
+      $deviza2 = $_POST['deviza2'];
+      $honap = $_POST['honap'];
+
+      if(strlen($deviza1)>0 && strlen($date)>0){
+       $mnbExact=true;
+      }
+
+      if(strlen($deviza2)>0 && strlen($honap)>0){
+        $mnbGraf=true;
+      }
     
-    } catch (SoapFault $e) {
-      var_dump($e);
-    }
 
-  }else{
-    $page = "login";
-    $loginError=true;
+
+    }
   }
 
 }
+
+function getRates($day,$currency){
+  $client = new SoapClient('http://www.mnb.hu/arfolyamok.asmx?WSDL');
+  $param = array('startDate' => date($day), 'endDate' => date($day), 'currencyNames' => $currency);
+  $result = $client->__soapCall('GetExchangeRates', array('parameters' => $param));
+  $xml = new SimpleXMLElement($result->GetExchangeRatesResult);
+  $xml= (array)$xml;
+  $dat=(array)($xml["Day"]);
+  return $dat["Rate"];
+}
+
 
 function killSession(){
   unset($_COOKIE['user']);
@@ -400,13 +435,63 @@ function killSession(){
       <div class="d-flex rounded-5"
         style="background-image: url(images/slider-image.jpg); background-size: cover; background-repeat: no-repeat; height: 85vh; background-position: center;">
         <div class="row align-items-center m-auto pt-5 px-4 px-lg-0">
-          <div class="text-start col-md-6 col-lg-5 col-xl-6 offset-lg-1">
+          
 
           <?php 
             if($loginError){
               print "<h1>Hibás felhasználónév vagy jelszó!</h1>";
             }
+
+            if($mnbExact){
+              $rate=getRates($date,$deviza1);
+              print $date." napján a(z) ".$deviza1." árfolyama ".$rate." volt.";
+            }
+
             print file_get_contents($page.".html");
+
+            if($mnbGraf){
+
+              $month=explode("-",$honap);
+
+              $days= cal_days_in_month(CAL_GREGORIAN,$month[1],$month[0]);
+
+              $result = '<table style="border: #574C38 2px solid;background: #A08C6A;border-radius: 7px 7px 5px 5px;padding: 50px;width: fit-content;" ><tr><th> Nap </th><th> Deviza </th><th> Ertek </th></tr>';
+              $dataPoints=[];
+
+              for ($i=0; $i <$days ; $i++) {
+                $rateDay=$honap;
+                if($i<9){
+                  $rateDay.="-0".($i+1);
+                }else{
+                  $rateDay.="-".($i+1);
+                }
+                $result.="<tr><td>".$rateDay."</td><td>".$deviza2."</td><td>";
+                $rate=getRates($rateDay,$deviza2);
+                $result.=$rate."</td></tr>";
+                $rate=str_replace(",",".",$rate);
+                array_push($dataPoints,$rate);
+              }
+              $result.="</table>";
+              print $result;
+
+              $chart='<div><canvas id="myChart"></canvas></div><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script>';
+              $chart.="const ctx = document.getElementById('myChart');new Chart(ctx, {type: 'bar',data: {labels: [";
+              
+              for ($i=0; $i <$days ; $i++) { 
+                $chart.=$i.",";
+              }
+              $chart.="],datasets: [{label: 'Árfolyam',data: [";
+
+              for ($i=0; $i <$days ; $i++) { 
+                $chart.=$dataPoints[$i].",";
+              }
+              $chart.="],borderWidth: 1}]},options: {scales: {y: {beginAtZero: false}}}});</script>";
+
+              print $chart;
+
+
+            }
+
 
             if($page=="pizza"){
               $kliens = new SoapClient(null, $options);
@@ -428,7 +513,7 @@ function killSession(){
 
 
 
-          </div>
+          
     </div>
   </section>
 

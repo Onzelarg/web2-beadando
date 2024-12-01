@@ -1,172 +1,51 @@
 <?php
+$url = "https://3dshell.hu/soap/web2/restserver.php";
+$result = "";
 
-$page = "fooldal";
+if(isset($_POST['id'])){
 
-//ini_set("default_socket_timeout", 5000);
-$options = array(
-  // Kell location és uri is:
-  "location" => "https://3dshell.hu/soap/web2/server.php",
-  "uri" => "https://3dshell.hu/soap/web2/server.php",
-  'keep_alive' => false,
-  //'trace' =>true,
-  //'connection_timeout' => 5000,
-  //'cache_wsdl' => WSDL_CACHE_NONE,
-);
+    $_POST['n'] = trim($_POST['n']);
+    $_POST['k'] = trim($_POST['k']);
+    $_POST['v'] = trim($_POST['v']);
 
-try {
-  $kliens = new SoapClient(null, $options);
-  $menuk= $kliens->getPages();
 
-} catch (SoapFault $e) {
-  var_dump($e);
-}
-
-if($_GET['page']){
-  $page = $_GET['page'];
-}
-
-if($_GET['ks']){
-  if($_GET[ks]==1){
-    killSession();
-  }
-}
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") { 
-  if($page=="login"){
-    if($_POST['username'] && $_POST['password']){
-      $user=$_POST['username'];
-      $pwd=$_POST['password'];
-
-      $isRegister=$_GET['register'];
-
-      try {
-        $kliens = new SoapClient(null, $options);
-
-        if($isRegister){
-          $kliens->addUser($user,$pwd,1);
-        }
-
-        if(!$isRegister){
-          $success = $kliens->getUser($user,$pwd);
-
-          if($success){
-            $page="fooldal";
-            setcookie("user", $user, time() + (1800), "/"); // 1800 = 30 perc
-            header("Refresh:0; url=index.php?page=fooldal");
-          }else{
-            $page = "login";
-            $loginError=true;
-          }
-      }
-      
-      } catch (SoapFault $e) {
-        var_dump($e);
-      }
-
-    }else{
-      $page = "login";
-      $loginError=true;
+    if($_POST['n'] != "" && $_POST['k'] != "" && $_POST['v'] != ""){
+        $data = Array("n" => $_POST["n"], "k" => $_POST["k"], "v" => $_POST["v"]);
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($ch);
+        curl_close($ch);
+    }elseif($_POST['n'] >= 1 || ($_POST['k'] != "" || $_POST['n'] != "")){
+        $data = Array("n" => $_POST["n"], "k" => $_POST["k"], "v" => $_POST["v"]);
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($ch);
+        curl_close($ch);
+    }elseif($_POST['n'] != ""){
+        $data = Array("n" => $_POST["n"]);
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($ch);
+        curl_close($ch);
     }
-  }
-
-  if($page=="mnb"){
-    if($_GET['mnbform']==1){
-
-      $deviza1 = $_POST['deviza1'];
-      $date = $_POST['start'];
-
-      $deviza2 = $_POST['deviza2'];
-      $honap = $_POST['honap'];
-
-      if(strlen($deviza1)>0 && strlen($date)>0){
-       $mnbExact=true;
-      }
-
-      if(strlen($deviza2)>0 && strlen($honap)>0){
-        $mnbGraf=true;
-      }
-    }
-  }
-
-  if($page=="pdf"){
-    if($_GET['pdfform']==1){
-
-      $darab = $_POST['darab'];
-      $pizza = $_POST['pizza'];
-      $vega = $_POST['vega'];
-
-      try {
-        $kliens = new SoapClient(null, $options);
-      
-      } catch (SoapFault $e) {
-        var_dump($e);
-      }
-
-      if($pizza!=""){
-        $result = $kliens->pdfPizza($pizza);
-      }elseif($vega!=""){
-        $result =  $kliens->pdfVega();
-      }elseif($darab!=""){
-        $result =  $kliens->pdfDarab($darab);
-      }
-
-      include("tcpdf/tcpdf.php");
-
-      $pdf= new TCPDF("P","mm","A4");
-
-      //$pdf->setPrinterHeader(false);
-      //$pdf->setPrinterFooter(false);
-
-      $pdf->AddPage();
-
-      for ($i=0; $i <count($result) ; $i++) { 
-        $pdf->Cell(160,5,$result[$i],1);
-        $pdf->Ln(); 
-      }
-
-      
-
-      $pdf->Output();
-
-
-    }
-  }
-
-}
-
-function getRates($day,$currency){
-  $client = new SoapClient('http://www.mnb.hu/arfolyamok.asmx?WSDL');
-  $param = array('startDate' => date($day), 'endDate' => date($day), 'currencyNames' => $currency);
-  $result = $client->__soapCall('GetExchangeRates', array('parameters' => $param));
-  $xml = new SimpleXMLElement($result->GetExchangeRatesResult);
-  $xml= (array)$xml;
-  $dat=(array)($xml["Day"]);
-  return $dat["Rate"];
 }
 
 
-function killSession(){
-  unset($_COOKIE['user']);
-  setcookie("user", "", time() - 3600, "/");
-}
-
-
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$tabla = curl_exec($ch);
+curl_close($ch);
 
 ?>
 
-
-
-
-
-
-
-
-<!DOCTYPE html>
-<html>
-
 <head>
-  <title>"Bella Pizza" Étterem</title>
-  <link rel="icon" type="image/x-icon" href="/img/favico.png">
+  <title>Mellow - Hotel HTML Website Template</title>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -352,8 +231,8 @@ function killSession(){
 
       <div class="container-fluid padding-side">
         <div class="d-flex justify-content-between align-items-center w-100">
-          <a class="navbar-brand" href="index.php">
-            <img src="img/logo.jpg" class="logo img-fluid" width="150" height="150">
+          <a class="navbar-brand" href="index.html">
+            <img src="images/main-logo.png" class="logo img-fluid">
           </a>
 
           <button class="navbar-toggler border-0 d-flex d-lg-none order-3 p-2 shadow-none" type="button"
@@ -382,10 +261,9 @@ function killSession(){
                 </form>
 
               </div>
-
               <ul class="navbar-nav align-items-center mb-2 mb-lg-0">
                 <li class="nav-item px-3">
-                  <a class="nav-link active p-0" aria-current="page" href="<?php print "?page=".$menuk[6][0] ?>"><?php print $menuk[6][1] ?></a>
+                  <a class="nav-link active p-0" aria-current="page" href="index.php?page=fooldal">Fooldal</a>
                 </li>
 
                 <li class="nav-item px-3 dropdown">
@@ -393,71 +271,29 @@ function killSession(){
                     aria-expanded="false">Soap</a>
                   <ul class="dropdown-menu dropdown-menu-end animate slide mt-3 border-0 shadow">
 
-                    <li><a href="<?php print "index.php?page=".$menuk[0][0] ?>" class="dropdown-item "><?php print $menuk[0][1] ?> </a>
+                    <li><a href="index.php?page=pizza" class="dropdown-item ">Pizzak </a>
                     </li>
 
-                    <li><a href="<?php print "?page=".$menuk[2][0] ?>" class="dropdown-item "><?php print $menuk[2][1] ?> </a>
+                    <li><a href="index.php?page=rendeles" class="dropdown-item ">Rendelesek </a>
                     </li>
 
                   </ul>
                 </li>
 
                 <li class="nav-item px-3">
-                  <a class="nav-link p-0" href="<?php print "?page=".$menuk[3][0] ?>"><?php print $menuk[3][1] ?></a>
-                </li>
- 
-                <li class="nav-item px-3">
-                  <a class="nav-link p-0" href="restful.php"><?php print $menuk[4][1] ?></a>
+                  <a class="nav-link p-0" href="index.php?page=mnb">MNB Soap Kliens</a>
                 </li>
 
                 <li class="nav-item px-3">
-                  <a class="nav-link p-0" href="<?php print "?page=".$menuk[5][0] ?>"><?php print $menuk[5][1] ?></a>
+                  <a class="nav-link p-0" href="restful.php">Restful API</a>
                 </li>
 
                 <li class="nav-item px-3">
-                  <a class="nav-link p-0" href="
-                  <?php 
+                  <a class="nav-link p-0" href="index.php?page=pdf">PDF kesziio</a>
+                </li>
 
-                    if (isset($_COOKIE['user'])){
-                      print "index.php?ks=1";
-                    }else{
-                      print "?page=".$menuk[1][0];
-                    }
-                  
-                   
-                  ?>
-                  ">
-
-                  <?php 
- 
-                  if (isset($_COOKIE['user'])){
-                      print "Hello ".$_COOKIE['user']." ! (";
-
-                      try {
-                        $kliens = new SoapClient(null, $options);
-                        $role = $kliens->getRole($_COOKIE['user']);
-                        if($role[0]==2){
-                          print "Admin";
-                        }else{
-                          print "Felhasználó";
-                        }
-                        print ")";
-                      }
-                      catch (SoapFault $e) {
-                        var_dump($e);
-                      }
-
-
-                  }else{
-                      print $menuk[1][1];
-                  }
-
-                  
-                  
-                  
-                  
-                  ?>
-                  </a>
+                <li class="nav-item px-3">
+                  <a class="nav-link p-0" href="index.php?page=login">Belepes</a>
                 </li>
 
                 
@@ -479,83 +315,18 @@ function killSession(){
         <div class="row align-items-center m-auto pt-5 px-4 px-lg-0">
           
 
-          <?php 
-            if($loginError){
-              print "<h1>Hibás felhasználónév vagy jelszó!</h1>";
-            }
 
-            if($mnbExact){
-              $rate=getRates($date,$deviza1);
-              print $date." napján a(z) ".$deviza1." árfolyama ".$rate." volt.";
-            }
-
-            print file_get_contents($page.".html");
-
-            if($mnbGraf){
-
-              $month=explode("-",$honap);
-
-              $days= cal_days_in_month(CAL_GREGORIAN,$month[1],$month[0]);
-
-              $result = '<table style="border: #574C38 2px solid;background: #A08C6A;border-radius: 7px 7px 5px 5px;padding: 50px;width: fit-content;" ><tr><th> Nap </th><th> Deviza </th><th> Ertek </th></tr>';
-              $dataPoints=[];
-
-              for ($i=0; $i <$days ; $i++) {
-                $rateDay=$honap;
-                if($i<9){
-                  $rateDay.="-0".($i+1);
-                }else{
-                  $rateDay.="-".($i+1);
-                }
-                $result.="<tr><td>".$rateDay."</td><td>".$deviza2."</td><td>";
-                $rate=getRates($rateDay,$deviza2);
-                $result.=$rate."</td></tr>";
-                $rate=str_replace(",",".",$rate);
-                array_push($dataPoints,$rate);
-              }
-              $result.="</table>";
-              print $result;
-
-              $chart='<div><canvas id="myChart"></canvas></div><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script>';
-              $chart.="const ctx = document.getElementById('myChart');new Chart(ctx, {type: 'bar',data: {labels: [";
-              
-              for ($i=0; $i <$days ; $i++) { 
-                $chart.=$i.",";
-              }
-              $chart.="],datasets: [{label: 'Árfolyam',data: [";
-
-              for ($i=0; $i <$days ; $i++) { 
-                $chart.=$dataPoints[$i].",";
-              }
-              $chart.="],borderWidth: 1}]},options: {scales: {y: {beginAtZero: false}}}});</script>";
-
-              print $chart;
-
-
-            }
-
-
-            if($page=="pizza"){
-              $kliens = new SoapClient(null, $options);
-
-              print $kliens->listAllCategory();
-              print "</table>";
-
-              print $kliens->listAllPizza();
-              print "</table>";
-            }
-
-            if($page=="rendeles"){
-              $kliens = new SoapClient(null, $options);
-              print $kliens->listAllOrder();
-              print "</table>";
-            }
-          
-          ?>
-
-
-
-          
+        <?php $result ?>
+        <h1>Felhasználók:</h1>
+        <?php $tabla ?>
+        <br>
+        <h2>Módosítás / Beszúrás</h2>
+        <form method="post">
+            Név: <input type="text" name="n"><br>
+            Kategória név: <input type="text" name="k"><br>
+            Vegetáriánus: <input type="text" name="v"><br>
+            <input type="submit" value = "Küldés">
+        </form>   
     </div>
   </section>
 

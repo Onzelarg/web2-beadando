@@ -5,8 +5,8 @@ $page = "fooldal";
 //ini_set("default_socket_timeout", 5000);
 $options = array(
   // Kell location és uri is:
-  "location" => "https://3dshell.hu/soap/server.php",
-  "uri" => "https://3dshell.hu/soap/server.php",
+  "location" => "https://3dshell.hu/soap/web2/server.php",
+  "uri" => "https://3dshell.hu/soap/web2/server.php",
   'keep_alive' => false,
   //'trace' =>true,
   //'connection_timeout' => 5000,
